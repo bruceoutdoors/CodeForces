@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <map>
 #include <tuple>
+#include <memory>
 
 using namespace std;
 
@@ -97,74 +98,74 @@ private:
 
 map<pair<int, int>, xd> FFT::omega;
 
-ivec pad(const string &s, const int &k, const char &c)
+struct Padder 
 {
-	int n = s.size();
-	int start, end;
-	ivec a(n, 0);
+	Padder(const int &n, const int &pad) 
+	: Data(n, 0), pad(pad), n(n) {}
 
-	for (int i = 0; i < n; ++i) {
-		if (s[i] == c) {
-			start = i - k;
-			start = start < 0 ? 0 : start;
-			end = i + k;
-			end = end >= n ? n - 1 : end;
+	// assumes idx is passed in ascending order
+	void mark(const int &idx) 
+	{
+		int start = idx - pad;
+		if (start < p) start = p;
+		int end = idx + pad + 1;
+		if (end > n) end = n;
 
-			for (int j = start; j <= end; ++j) {
-				a[j] = 1;
-			}
+		for (int i = start; i < end; ++i) {
+			Data[i] = 1;
 		}
+		
+		p = end;
 	}
 
-	return a;
-}
+	ivec Data;
+	int pad;
+	int n;
+	int p = 0;
+};
 
 int main()
 {
 	clog.setstate(ios_base::failbit); // turn off log
 
 	const char DNA[] = { 'A', 'T', 'G', 'C' };
+	map<char, unique_ptr<Padder>> A;
+	map<char, ivec> B;
+	
 	int slen, tlen, k;
 	string s, t;
 
 	cin >> slen >> tlen >> k
-		>> s >> t;
+		>> s    >> t;
 
 	ivec match(slen + tlen - 1, 0);
-
-	clog << s << endl << t << endl << endl;
-
+	
+	// init map:
 	for (int c = 0; c < 4; c++) {
-		ivec A = pad(s, k, DNA[c]);
-
-		for (auto ch : A) clog << ch;
-		clog << "\t";
-
-		ivec B(t.size(), 0);
-		for (size_t i = 0; i < t.size(); ++i) {
-			if (t[i] == DNA[c]) B[tlen - i - 1] = 1;
-		}
-
-		for (auto ch : B) clog << ch;
-		clog << "\t";
-
-		ivec C = FFT::convolve(A, B);
-
-		for (int i = 0; i < C.size(); ++i) {
-			match[i] += C[i];
-		}
-
-		for (auto ch : C) clog << ch;
-		clog << endl;
+		A[DNA[c]] = make_unique<Padder>(slen, k);
+		B[DNA[c]] = ivec(tlen, 0);
+	}
+	
+	for (int i = 0; i < slen; ++i) {
+		A[s[i]].get()->mark(i);
+	}
+	
+	for (size_t i = 0; i < t.size(); ++i) {
+		B[t[i]][tlen - i - 1] = 1;
 	}
 
-	clog << endl;
-	for (auto ch : match) clog << ch;
-	clog << endl;
+	for (int c = 0; c < 4; c++) {
+		ivec C = FFT::convolve(A[DNA[c]].get()->Data, B[DNA[c]]);
+		
+		for (size_t i = 0; i < C.size(); ++i) {
+			match[i] += C[i];
+		}
+	}
 
 	int answer = 0;
 	for (const auto &m : match) {
 		if (m == tlen) ++answer;
 	}
+	
 	cout << answer;
 }
