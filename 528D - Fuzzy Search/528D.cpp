@@ -27,11 +27,15 @@ public:
 
 		// transform array size must be in power of 2 for FFT
 		size_t N = 1;
-		while (N < deg) N <<= 1;
+		logN = 0;
+		while (N < deg) {
+			N <<= 1;
+			++logN;
+		}
 
 		// precompute omega, if not yet done so:
 		for (int i = N; i > 0; i >>= 1) {
-			if (omega.find({ i, 0 }) != omega.end()) break;
+			if (omega.find({i, 0}) != omega.end()) break;
 
 			int p = i / 2;
 			for (double j = 1 - p; j < p; ++j) {
@@ -58,7 +62,7 @@ public:
 		ivec c(deg);
 		cpv = transform(cpv, true);
 		for (size_t i = 0; i < deg; ++i) {
-			c[i] = (int)round(cpv[i].real() / N);
+			c[i] = round(cpv[i].real() / N);
 		}
 
 		return c;
@@ -66,37 +70,55 @@ public:
 
 private:
 	static map<pair<int, int>, xd> omega;
+	static int logN;
 
 	static xvec transform(xvec &s, bool inv = false)
 	{
 		int N = s.size();
-
-		if (N == 1) return s;
-
-		int halfN = N / 2;
-		xvec se, so;
-		se.reserve(halfN);
-		so.reserve(halfN);
-
-		for (int i = 0; i < N; i += 2) {
-			se.push_back(s[i]);     // even
-			so.push_back(s[i + 1]); // odd
+		int i, m, u, v;
+		xd fodd, feven;
+		
+		// swap all elements with its bit reverse:
+		u = N - 1;
+		for (i = 1; i < u; ++i) {
+			v = reverseBits(i, logN);
+			if (v > i) swap(s[i], s[v]);
 		}
-
-		se = transform(se, inv);
-		so = transform(so, inv);
-
-		for (int m = 0; m < halfN; ++m) {
-			xd omso = omega[{N, inv ? m : -m}] * so[m];
-			s[m] = se[m] + omso;
-			s[m + halfN] = se[m] - omso;
+		
+		// in-place fourier transform:
+		for (int n = 2, p = 1; n <= N; n <<= 1, p <<= 1) {
+			for (i = 0; i < N; i += n) {
+				for (m = 0; m < p; ++m) {
+					u = i + m;
+					v = u + n/2;
+					fodd  = omega[{n, inv ? m : -m}] * s[v];
+					feven = s[u];
+					s[u] = feven + fodd;
+					s[v] = feven - fodd;
+				}
+			}
 		}
 
 		return s;
 	}
+	
+	static size_t reverseBits(const size_t &num, const size_t &bitNum)
+	{
+		size_t reverse_num = 0;
+
+		for (size_t i = 0; i < bitNum; ++i)
+		{
+			if (num & (1 << i)) {
+			   reverse_num |= 1 << ((bitNum - 1) - i); 
+			}
+		}
+		
+		return reverse_num;
+	}
 };
 
 map<pair<int, int>, xd> FFT::omega;
+int FFT::logN = 0;
 
 struct Padder 
 {
