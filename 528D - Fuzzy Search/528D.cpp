@@ -43,26 +43,24 @@ public:
 			}
 		}
 
-		xvec acof(N), bcof(N);
-		copy(a.begin(), a.end(), acof.begin());
-		copy(b.begin(), b.end(), bcof.begin());
-
-		xvec apv, bpv, cpv(N);
+		xvec ax(N), bx(N);
+		copy(a.begin(), a.end(), ax.begin());
+		copy(b.begin(), b.end(), bx.begin());
 
 		// evaluation: fft
-		apv = transform(acof);
-		bpv = transform(bcof);
+		transform(ax);
+		transform(bx);
 
 		// point-wise multiplcation
 		for (size_t i = 0; i < N; ++i) {
-			cpv[i] = apv[i] * bpv[i];
+			ax[i] *= bx[i];
 		}
 
 		// interpolation: ifft
 		ivec c(deg);
-		cpv = transform(cpv, true);
+		transform(ax, true);
 		for (size_t i = 0; i < deg; ++i) {
-			c[i] = round(cpv[i].real() / N);
+			c[i] = round(ax[i].real() / N);
 		}
 
 		return c;
@@ -72,7 +70,7 @@ private:
 	static map<pair<int, int>, xd> omega;
 	static int logN;
 
-	static xvec transform(xvec &s, bool inv = false)
+	static void transform(xvec &s, bool inv = false)
 	{
 		int N = s.size();
 		int i, m, u, v;
@@ -98,8 +96,6 @@ private:
 				}
 			}
 		}
-
-		return s;
 	}
 	
 	static size_t reverseBits(const size_t &num, const size_t &bitNum)
