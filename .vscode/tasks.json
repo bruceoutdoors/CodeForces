@@ -1,0 +1,35 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build cpp",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g",
+                "-std=c++14",
+                "-o",
+                "${fileBasenameNoExtension}",
+                "${file}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "cwd": "${fileDirname}"
+            }
+        },
+        {
+            "label": "build and run cpp",
+            "type": "shell",
+            "command": "./${fileBasenameNoExtension} < input.txt",
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "dependsOn": "build cpp",
+        }
+    ]
+}
